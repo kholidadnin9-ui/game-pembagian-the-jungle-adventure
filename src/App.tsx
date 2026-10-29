@@ -15,10 +15,62 @@ interface UserProgress {
   };
 }
 
+/**
+ * Mengacak array menggunakan Fisher-Yates tanpa mengubah array asli.
+ */
+function shuffleArray<T>(items: T[]): T[] {
+  const result = [...items];
+
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result;
+}
+
+/**
+ * Mengacak urutan soal dan posisi opsi jawaban.
+ * Setiap soal tetap memiliki satu jawaban benar (quotient).
+ */
+function randomizeQuestions(questions: Question[]): Question[] {
+  const randomized = questions.map((question) => {
+    const correct = question.quotient;
+    const distractors = [
+      ...new Set(question.options.filter((option) => option !== correct)),
+    ];
+
+    // Pastikan tersedia dua pilihan salah yang unik.
+    let distance = 1;
+    while (distractors.length < 2) {
+      const candidate =
+        correct + (distance % 2 === 1 ? distance : -distance);
+
+      if (
+        candidate >= 0 &&
+        candidate !== correct &&
+        !distractors.includes(candidate)
+      ) {
+        distractors.push(candidate);
+      }
+      distance++;
+    }
+
+    return {
+      ...question,
+      options: shuffleArray([correct, ...distractors.slice(0, 2)]),
+    };
+  });
+
+  return shuffleArray(randomized);
+}
+
 export function App() {
   const [screen, setScreen] = useState<GameScreen>('home');
   const [selectedLevelId, setSelectedLevelId] = useState<number>(1);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  // Urutan soal yang diacak disimpan terpisah untuk setiap level.
+  const [questionSets, setQuestionSets] = useState<Record<number, Question[]>>({});
   const [score, setScore] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(60);
   const [isTimerActive, setIsTimerActive] = useState<boolean>(false);
@@ -52,8 +104,16 @@ export function App() {
     };
   });
 
-  const currentLevel: LevelConfig = LEVEL_DATA.find((l) => l.id === selectedLevelId) || LEVEL_DATA[0];
-  const currentQuestion: Question = currentLevel.questions[currentQuestionIndex] || currentLevel.questions[0];
+  const baseLevel: LevelConfig =
+    LEVEL_DATA.find((level) => level.id === selectedLevelId) || LEVEL_DATA[0];
+
+  const currentLevel: LevelConfig = {
+    ...baseLevel,
+    questions: questionSets[selectedLevelId] ?? baseLevel.questions,
+  };
+
+  const currentQuestion: Question =
+    currentLevel.questions[currentQuestionIndex] || currentLevel.questions[0];
 
   // Save progress
   useEffect(() => {
@@ -107,9 +167,21 @@ export function App() {
     }
   };
 
-  // Start specific level
+  // Start specific level dengan urutan soal dan opsi jawaban acak.
   const startLevel = (levelId: number) => {
     sound.playPop();
+
+    const selectedLevel =
+      LEVEL_DATA.find((level) => level.id === levelId) || LEVEL_DATA[0];
+
+    // Acak ulang setiap kali level dimulai, termasuk saat kembali bermain.
+    const randomizedQuestions = randomizeQuestions(selectedLevel.questions);
+
+    setQuestionSets((previous) => ({
+      ...previous,
+      [levelId]: randomizedQuestions,
+    }));
+
     setSelectedLevelId(levelId);
     setCurrentQuestionIndex(0);
     setScore(0);
