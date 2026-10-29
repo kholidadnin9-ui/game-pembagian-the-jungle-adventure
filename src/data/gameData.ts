@@ -1,4 +1,3 @@
-```typescript
 export interface Question {
   id: number;
   dividend: number;
@@ -36,21 +35,18 @@ export function shuffleArray<T>(items: T[]): T[] {
 }
 
 /**
- * Membuat dua pilihan salah yang berbeda dari jawaban benar,
- * kemudian mengacak posisi ketiga pilihan.
+ * Mengacak posisi pilihan jawaban.
+ * Jawaban benar selalu sama dengan quotient.
  */
 export function shuffleOptions(question: Question): Question {
   const correct = question.quotient;
 
+  // Ambil pilihan salah dari data awal, buang duplikat dan jawaban benar.
   const wrongOptions = [
-    ...new Set(
-      question.options.filter(
-        (option) => option !== correct
-      )
-    ),
+    ...new Set(question.options.filter((option) => option !== correct)),
   ];
 
-  // Lengkapi pilihan salah jika data awal tidak mencukupi.
+  // Pastikan tersedia dua pilihan salah yang berbeda.
   let distance = 1;
 
   while (wrongOptions.length < 2) {
@@ -68,31 +64,24 @@ export function shuffleOptions(question: Question): Question {
     distance++;
   }
 
+  // Acak posisi jawaban benar dan dua jawaban salah.
   return {
     ...question,
-    options: shuffleArray([
-      correct,
-      ...wrongOptions.slice(0, 2),
-    ]),
+    options: shuffleArray([correct, ...wrongOptions.slice(0, 2)]),
   };
 }
 
 /**
- * Mengacak urutan soal dan posisi jawaban untuk satu level.
+ * Mengacak urutan soal sekaligus posisi pilihan jawaban.
  */
-export function shuffleQuestions(
-  questions: Question[]
-): Question[] {
+export function shuffleQuestions(questions: Question[]): Question[] {
   return shuffleArray(questions).map(shuffleOptions);
 }
 
 /**
- * Mengambil soal untuk level tertentu dengan urutan acak.
- * Pemanggilan fungsi ini menghasilkan urutan baru.
+ * Menghasilkan salinan level dengan urutan soal yang diacak.
  */
-export function getRandomizedLevel(
-  level: LevelConfig
-): LevelConfig {
+export function getRandomizedLevel(level: LevelConfig): LevelConfig {
   return {
     ...level,
     questions: shuffleQuestions(level.questions),
@@ -216,4 +205,3 @@ export const LEVEL_DATA: LevelConfig[] = [
     ],
   },
 ];
-```
