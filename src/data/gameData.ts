@@ -22,11 +22,10 @@ export interface LevelConfig {
 }
 
 /**
- * Mengacak urutan array tanpa mengubah array asli.
- * Menggunakan Fisher-Yates Shuffle.
+ * Mengacak array tanpa mengubah data asli.
  */
-export function shuffleArray<T>(array: T[]): T[] {
-  const result = [...array];
+export function shuffleArray<T>(items: T[]): T[] {
+  const result = [...items];
 
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -37,59 +36,67 @@ export function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Mengacak pilihan jawaban.
- * Jawaban benar tetap disertakan tepat satu kali.
+ * Membuat dua pilihan salah yang berbeda dari jawaban benar,
+ * kemudian mengacak posisi ketiga pilihan.
  */
 export function shuffleOptions(question: Question): Question {
-  const correctAnswer = question.quotient;
+  const correct = question.quotient;
 
-  // Buat pilihan pengecoh yang berbeda dari jawaban benar.
-  const distractors = [
+  const wrongOptions = [
     ...new Set(
       question.options.filter(
-        (option) => option !== correctAnswer
+        (option) => option !== correct
       )
     ),
   ];
 
-  // Tambahkan pengecoh jika data awal belum menyediakan 2 pilihan salah.
-  let offset = 1;
+  // Lengkapi pilihan salah jika data awal tidak mencukupi.
+  let distance = 1;
 
-  while (distractors.length < 2) {
+  while (wrongOptions.length < 2) {
     const candidate =
-      correctAnswer + (offset % 2 === 1 ? offset : -offset);
+      correct + (distance % 2 === 1 ? distance : -distance);
 
     if (
       candidate >= 0 &&
-      candidate !== correctAnswer &&
-      !distractors.includes(candidate)
+      candidate !== correct &&
+      !wrongOptions.includes(candidate)
     ) {
-      distractors.push(candidate);
+      wrongOptions.push(candidate);
     }
 
-    offset++;
+    distance++;
   }
-
-  // Pastikan hanya ada 3 pilihan unik dan satu jawaban benar.
-  const options = shuffleArray([
-    correctAnswer,
-    ...distractors.slice(0, 2),
-  ]);
 
   return {
     ...question,
-    options,
+    options: shuffleArray([
+      correct,
+      ...wrongOptions.slice(0, 2),
+    ]),
   };
 }
 
 /**
  * Mengacak urutan soal dan posisi jawaban untuk satu level.
- * Gunakan saat permainan dimulai atau level dipilih.
  */
 export function shuffleQuestions(
   questions: Question[]
 ): Question[] {
   return shuffleArray(questions).map(shuffleOptions);
+}
+
+/**
+ * Mengambil soal untuk level tertentu dengan urutan acak.
+ * Pemanggilan fungsi ini menghasilkan urutan baru.
+ */
+export function getRandomizedLevel(
+  level: LevelConfig
+): LevelConfig {
+  return {
+    ...level,
+    questions: shuffleQuestions(level.questions),
+  };
 }
 
 export const LEVEL_DATA: LevelConfig[] = [
